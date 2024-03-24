@@ -1,5 +1,5 @@
 .env
 pyvenv.cfg
-Scripts
-Lib
+/Scripts
+/Lib
 /tools/__pycache__
