@@ -1,20 +1,7 @@
 import requests
-import vt # VirusTotal interface
-from tools import environment
+from tools.environment import *
+from tools.APIService import *
 
-
-apiKey = environment.getEnvironmentVariable("VIRUS_TOTAL_API_KEY")
-print("API Key:", apiKey)
-client = vt.Client(apiKey)
-
-
-websiteToCheck = "www.example.com"
-domainToCheck = websiteToCheck.split(".")
-print(domainToCheck)
-
-# TODO: Write a function to process website vs domain vs subdomain
-
-# TODO: Write a function to abstractify API calls - headers and authentication
 
 # TODO: Write a function to process results from belows Test API calls to VirusTotal?
 
@@ -29,26 +16,10 @@ print(domainToCheck)
 # 
 # Two goals: Prevent DDoS and Spoofing 
 
-'''
-# Test API calls to VirusTotal
+testWebsite = "www.example.com"
 
-# Get information about an URL
-urlID = vt.url_id("http://www.virustotal.com")
-urlInformation = client.get_object(f'/urls/{urlID}')
-print("URL Information", urlInformation)
-print("URL Times Submitted", urlInformation.times_submitted)
-print("URL Last Analysis Statistics", urlInformation.last_analysis_stats)
-'''
+testWebsite = "http://www.example.com"
 
-
-# Official API call method to VirusTotal
-url = "https://www.virustotal.com/api/v3/domains/{domainToCheck}"
-
-headers = {"accept": "application/json", "x-apikey": apiKey}
-
-response = requests.get(url, headers=headers)
-
-print(response.text)
-
-
-client.close()
+results = URLScanScanURL(testWebsite)
+for key in results:
+    print(key)

@@ -1,8 +1,10 @@
-def getEnvironmentVariable(key):
+def getEnvironmentVariable(desiredKey):
+    
+    environmentVariablesDictionary = {}
     with open('.env', 'r') as file:
         environmentVariables = file.readlines()
-        environmentVariablesDictionary = {}
-    for line in environmentVariables:
-        key, value = line.strip().split('=')
-        environmentVariablesDictionary[key] = value
-    return environmentVariablesDictionary[key]
+        for line in environmentVariables:
+            key, value = line.strip().split('=')
+            environmentVariablesDictionary[key] = value
+
+    return environmentVariablesDictionary[desiredKey]
