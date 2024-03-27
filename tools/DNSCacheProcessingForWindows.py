@@ -21,10 +21,8 @@ def cleanDNSRecords(records):
 
     cleanedGroupedRecords = clusterIntoGroups(cleanedRecords,'Record Name')
 
-    for record in cleanedRecords:
-        print(record)
     for group in cleanedGroupedRecords:
-        print("\n\n\nGroup:",group)
+        print("\n\nRecord Name:",group['Record Name'])
         for record in group['Records']:
             print(record)
 
@@ -35,30 +33,28 @@ def cleanDNSRecords(records):
 
 def clusterIntoGroups(listOfLists, matchingStringToGroup):
     groups = []
-    currentRecordName = None
-
-    currentGroup = {}
 
     for element in listOfLists:
         key, values = element[0], element[1:]
 
         if key == matchingStringToGroup:
-
+            # Matches 'Record Name'
             currentRecordName = values[0]
-            currentGroup = {'Record Name': currentRecordName, 'Records': []}
+            # Then we return the next existing group with record name if it exists.
+            currentGroup = next((group for group in groups if group[matchingStringToGroup] == currentRecordName), None)
 
-            groups.append(currentGroup)
+            # This means the group is first; no such record name exists yet
+            if currentGroup is None:
+                currentGroup = {matchingStringToGroup: currentRecordName, 'Records': []}
+                
+                groups.append(currentGroup)
+
         else:
 
             if len(values) == 1:
-
                 values = values[0]
 
-            if currentRecordName == currentGroup.get('Record Name'):
-                currentGroup['Records'].append({key: values})
-
-            else:
-                currentGroup = {'Record Name': currentRecordName, 'Records': [{key: values}]}
-                groups.append(currentGroup)
+            currentGroup['Records'].append((key, values))
 
     return groups
+
