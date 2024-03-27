@@ -3,3 +3,4 @@ pyvenv.cfg
 /Scripts
 /Lib
 /tools/__pycache__
+DNSRecursiveResolverCacheRaw.txt
