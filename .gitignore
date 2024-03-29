@@ -4,3 +4,4 @@ pyvenv.cfg
 /Lib
 /tools/__pycache__
 DNSRecursiveResolverCacheRaw.txt
+__pycache__

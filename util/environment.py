@@ -1,3 +1,4 @@
+
 def getEnvironmentVariable(desiredKey):
     
     environmentVariablesDictionary = {}

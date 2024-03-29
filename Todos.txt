@@ -1,0 +1,11 @@
+
+# TODO: Think of how to run script in the background with low usage
+
+# TODO: Think of how to to read records and detect spoofing and or DDoS. Capturing packets?
+
+# TODO: Check if IP address and domain name is consistent
+
+# For the above todos, remember that you are working with host-recursive_resolver layer of DNS
+# So just focus on getting ISP DNS cache and your cache.
+# 
+# Two goals: Prevent DDoS and Spoofing 
