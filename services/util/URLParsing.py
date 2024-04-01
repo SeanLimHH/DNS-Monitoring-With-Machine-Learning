@@ -1,37 +1,34 @@
 import re
+import validators
 
-def checkIfValidIPAddress(IPAddress):
+def isValidIPAddress(IPAddress):
     # Pattern: https://regex101.com/r/ky1g6s/1
     # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions/Cheatsheet#character_classes
 
     pattern = re.compile(r'^[0-9]+.+[0-9]$')
     match = re.match(pattern, IPAddress)
     if match is not None:
-        return match
+        return True
     else:
-        raise Exception("IP address is invalid")
+        return False
 
-def checkIfValidDomain(string):
-    # Pattern: https://regex101.com/r/8j1ZNV/1
-    # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions/Cheatsheet#character_classes
-
-    pattern = re.compile(r'^[A-z0-9]+.+[A-z0-9]$')
-    match = re.match(pattern, IPAddress)
-    if match is not None:
-        return match
+def isValidDomain(string):
+    
+    if validators.domain(string):
+        return True
     else:
-        raise Exception("Domain is invalid")
+        return False
 
-def checkIfValidURL(string):
+def isValidURL(string):
     # Pattern: https://regex101.com/r/LOQEXz/2
     # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions/Cheatsheet#character_classes
 
     pattern = re.compile(r'^https?://www(.[a-z0-9]+)+')
-    match = re.match(pattern, IPAddress)
+    match = re.match(pattern, string)
     if match is not None:
-        return match
+        return True
     else:
-        raise Exception("URL is invalid")
+        return False
 
 def isLocalHost(IPAddress):
     if IPAddress == "127.0.0.1" or "localhost" in IPAddress:

@@ -5,12 +5,18 @@ def signatureBasedScans(domainIPAddressesToCheck):
     # VirusTotal and or URLScan
     results = dict()
     for domain in domainIPAddressesToCheck:
-        results[domain] = {'Domain scan result': VirusTotalAPI.VirusTotalScanDomain(domain)}
+        domainScanResult = VirusTotalAPI.VirusTotalScanDomain(domain)
+        if domainScanResult:
+            results[domain] = {'Domain scan result': domainScanResult}
+        else:
+            results[domain] = {'Domain scan result': 'N/A'}
         for IPAddress in domainIPAddressesToCheck[domain]:
-            print("Domain",domain)
-            print("IP address", IPAddress)
             results[domain][IPAddress] = VirusTotalAPI.VirusTotalScanIPAddress(IPAddress)
     for result in results:
-        print(result)
+        print(result, ":", results[result]['Domain scan result'])
+        for IPAddress, IPAddressResult in {key: value for key, value in results[result].items() if key != 'Domain scan result'}.items():
+            print(IPAddress,":", IPAddressResult)
 
 domainIPAddressesToCheck = DNSResolver.getDNSRecordsDomainIPAddress()
+
+signatureBasedScans(domainIPAddressesToCheck)
