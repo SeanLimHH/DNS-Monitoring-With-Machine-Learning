@@ -1,11 +1,21 @@
-# https://www.firewall.cx/networking/network-protocols/dns-protocol/protocols-dns-query.html
-# https://medium.com/@aneess437/network-monitoring-with-python-and-scapy-arp-scanning-and-dns-sniffing-explained-8b4eb1c3ff58
-# https://thepacketgeek.com/scapy/building-network-tools/part-09/
-from scapy.all import sniff, DNS, IP, DNSQR, UDP, sr1
+from scapy.all import sniff, DNS, IP, DNSQR, UDP, sr1, ls
 import socket
 
 
-# https://stackoverflow.com/questions/24792462/python-scapy-dns-sniffer-and-parser
+
+packetsSniffed = []
+
+def viewDNSPropertiesOfPackets(packetsList): # Could do length check
+    for packet in packetsList:
+        DNSProperties = packet[DNS]
+        try:
+            print("DNS ID:", DNSProperties.id)
+            print("DNS Query:", DNSProperties.qd.qname)
+            print("DNS Query Type:", DNSProperties.qd.qtype)
+            print("DNS Response:", DNSProperties.an.rdata)
+            print("Packet length:", len(packet))
+        except:
+            pass # We ignore because the packet may not have anything
 
 def viewDNSPacketsSniffed(packet):
     if packet.haslayer(DNS) and packet.haslayer(IP):
@@ -13,10 +23,10 @@ def viewDNSPacketsSniffed(packet):
         domainName = removeTrailingDot(packet[DNS].qd.qname.decode('utf-8'))
         print(f"DNS Query from {IPSource}: {domainName}")
         if verifyDNSLookups(domainName, IPSource):
-            print("No discrepancy! Good.")
+            print("No discrepancy.")
         else:
-            print("Discrepancy! Bad.")
-
+            print("Discrepancy detected.")
+        packetsSniffed.append(packet)
 
 def forwardDNSLookup(domainName):
     forwardQuery = DNS(rd=1, qd=DNSQR(qname=domainName))
@@ -70,3 +80,5 @@ def removeTrailingDot(domainName):
         return domainName.rstrip(".")
     return domainName
 sniff(filter="udp port 53", prn=viewDNSPacketsSniffed, store=0, count = 10) # Remove count parameter to sniff forever
+
+viewDNSPropertiesOfPackets(packetsSniffed)
