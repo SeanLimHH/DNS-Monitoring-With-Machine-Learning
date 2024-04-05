@@ -26,10 +26,12 @@ for isolation tree. We will construct multiple isolation trees. Of course, the m
 
 Then, after making multiple isolation trees, we will aggregate the isolation trees in the isolation forest.
 We will use averaging, and Z-score.
-'''
+
+We will use the dataset:
+Bubnov, Yakov (2021), 'DNS Tunneling Queries for Binary Classification', Mendeley Data, V2, doi: 10.17632/mzn9hvdcxg.2
+To build a "majority" normal data for isolation forest to reference and isolate abnormalies.
 
 
-'''
 IsolationForest algorithm from scikit-learn
 Parameters explained:
 n_estimators: number of isolation trees. See above. Default is 100
@@ -42,13 +44,53 @@ Function:
 predict(): output: 1 means not outlier. -1 means outlier.
 '''
 from sklearn.ensemble import IsolationForest
+from joblib import dump, load
+from dataset import loadDataset
 import inspect
 
-def computeAbnormalities(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
+def buildIsolationForestQueryLength(list_, save = True):
     list_ = wrapListElementsIfPossible(list_)
     if verifyWrappedListFormat(list_):
-        clf = IsolationForest(random_state=0).fit(list_)
-        results = clf.predict(list_)
+        classifier = IsolationForest().fit(list_)
+        if save:
+            dump(classifier, 'IsolationForestQueryLength.joblib')
+
+def buildIsolationForestResponseLength(list_, save = True):
+    list_ = wrapListElementsIfPossible(list_)
+    if verifyWrappedListFormat(list_):
+        classifier = IsolationForest().fit(list_)
+        if save:
+            dump(classifier, 'IsolationForestResponseLength.joblib')
+
+
+def loadIsolationForestQueryLength():
+    try:
+        return load('IsolationForestQueryLength.joblib')
+    except FileNotFoundError:
+        print("IsolationForestQueryLength.joblib file not found.")
+        raise
+
+def loadIsolationForestResponseLength():
+    try:
+        return load('IsolationForestResponseLength.joblib')
+    except FileNotFoundError:
+        print("IsolationForestResponseLength.joblib file not found.")
+        raise
+
+
+def predictQueryLength(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
+    isolationForestQueryLength = loadIsolationForestQueryLength()
+    list_ = wrapListElementsIfPossible(list_)
+    if verifyWrappedListFormat(list_):
+        results = isolationForestQueryLength.predict(list_)
+        print("Abnormalities results:", results)
+        return results
+
+def predictResponseLength(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
+    isolationForestResponseLength = loadIsolationForestResponseLength()
+    list_ = wrapListElementsIfPossible(list_)
+    if verifyWrappedListFormat(list_):
+        results = isolationForestResponseLength.predict(list_)
         print("Abnormalities results:", results)
         return results
 
@@ -69,18 +111,22 @@ def wrapListElementsIfPossible(possibleList):
         return [[x] for x in possibleList]
     return possibleList
 
-computeAbnormalities([
-    [1.23, 0.234, 4],
-    [2, 1, 3.23],
-    [2.31, 0.121, 1023],
-    [12394, 50, 30],
-    [32,4,20],
-    [0,3,10000]
-])
 
-computeAbnormalities([
-    [1.23],   
-    [2],
-    [2.31],
-    [12394]
-])
+try:
+    isolationForestQueryLength = loadIsolationForestQueryLength()
+except FileNotFoundError:
+    print("Isolation Forest algorithm for query length not yet set up. Setting it up now...")
+    normalQueryLengthData = loadDataset.getQueryNameLengthNormalTunnelingData()
+    buildIsolationForestQueryLength(normalQueryLengthData)
+
+    print("Isolation Forest algorithm for query length is set up and ready for prediction.")
+
+
+try:
+    isolationForestResponseLength = loadIsolationForestResponseLength()
+except FileNotFoundError:
+    print("Isolation Forest algorithm for response length not yet set up. Setting it up now...")
+    normalResponseLengthData = loadDataset.getResourceRecordNameLengthNormalTunnelingData()
+    buildIsolationForestResponseLength(normalResponseLengthData)
+
+    print("Isolation Forest algorithm for response length is set up and ready for prediction.")

@@ -1,4 +1,6 @@
 '''
+Random Forest algorithm is more suitable for categorical tasks; whereas Isolation Forest algorithm is more suitable for detecting anomalies (in a feature)
+
 https://www.analyticsvidhya.com/blog/2021/06/understanding-random-forest/#:~:text=Random%20forest%20algorithm%20is%20an,both%20classification%20and%20regression%20problems.
 https://www.youtube.com/watch?v=_3ahmI5vpKY&list=PLeo1K3hjS3uuvuAXhYjV2lMEShq2UYSwX&index=13
 
@@ -94,8 +96,9 @@ F1 score: Balances precision and recall
 
 
 Random Forest algorithm is a supervised machine learning algorithm. It needs training dataset.
-I used the following dataset to build the encoding: 
+I used the following datasets to build the encoding: 
 https://github.com/csirtgadgets/tf-domains-example/tree/master
+Bubnov, Yakov (2021), 'DNS Tunneling Queries for Binary Classification', Mendeley Data, V2, doi: 10.17632/mzn9hvdcxg.2
 
 '''
 
@@ -103,52 +106,229 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score
-import numpy as np
-
-#TODO: Input in the dataset above.
-exampleSuspiciousDomains = ['u9hdsihsd.com', 'aoisfh3hweui.abc', 'adsiufn9wq.qr', 'zxcihvoifusgn.to']
-
-exampleSafeDomains = ['google.com', 'yahoo.com', 'amazon.com', 'microsoft.com', 'youtube.com', 'facebook.com']
-
-# We will mark 1 for suspicious domains, 0 for real domains. Purpose is to label and teach the model.
-labels = [1] * len(exampleSuspiciousDomains) + [0] * len(exampleSafeDomains)
-
-print("Labels", labels)
 
 
-
-allDomains = exampleSuspiciousDomains +exampleSafeDomains
-print("domains list", allDomains)
-
-ngramRange = (2, 4)  # I hypothesise that there are 2 characters to 4 characters in each subdomain / TLD
-
-# The analyser parameter determines whether a word should be encoded or just individual characters
-# Since domain names can be jumbled, i used characters encoding.
-countVectoriser = CountVectorizer(analyzer='char', ngram_range=ngramRange)
-
-# Learn the vocabulary dictionary and return document-term matrix.
-X = countVectoriser.fit_transform(allDomains)
-
-XTrain, XTest, yTrain, yTest = train_test_split(X, labels, test_size=0.2, random_state=42)
-
-classifier = RandomForestClassifier(n_estimators=100, random_state=1)
-classifier.fit(XTrain, yTrain) # Learns actual output from input
-
-yPredictions = classifier.predict(XTest) # Tests on test dataset. Used for evaluation
-
-print("Accuracy:", accuracy_score(yTest, yPredictions))
-print("\n\n\n")
-print("Classification Report:", classification_report(yTest, yPredictions))
-
-# These new domains: #TODO: Plug in the domains to test out.
-newDomains = ['xyc123.com', 'google.com', 'abcxyz.org', 'asdhfuoihas.to']
+# https://scikit-learn.org/stable/model_persistence.html
+# We save the classifier so we do not have to keep retraining it.
+from joblib import dump, load
+from dataset import loadDataset
 
 
-Xnew = countVectoriser.transform(newDomains)
-predictions = classifier.predict(Xnew)
+def trainRandomForestClassifierQueryResponse(labels, encodedData, testSize = 0.2, save = True, fixRandom = True, n_estimators = 100 ):
 
-for domain, prediction in zip(newDomains, predictions):
-    if prediction == 1:
-        print(f"{domain}: DGA detected")
-    else:
-        print(f"{domain}: Legitimate")
+    # encodedData: df[['qd_qtype', 'qd_qname_len', 'ar_type', 'ar_rdata_len']]
+
+    # Labels: 0 means non-malicious, 1 means malicious
+    XTrain, XTest,yTrain, yTest, classifier = None, None, None, None, None
+
+    if fixRandom:
+        XTrain, XTest, yTrain, yTest = train_test_split(encodedData, labels, test_size=testSize, random_state=1)
+
+        classifier = RandomForestClassifier(n_estimators=100, random_state=1)
+    else: 
+        XTrain, XTest, yTrain, yTest = train_test_split(encodedData, labels, test_size=testSize)
+
+        classifier = RandomForestClassifier(n_estimators=100)
+
+    classifier.fit(XTrain, yTrain) # Learns actual output from input
+
+    yPredictions = classifier.predict(XTest) # Tests on test dataset. Used for evaluation
+
+    print("Accuracy:", accuracy_score(yTest, yPredictions))
+    print("\n\n\n")
+    print("Classification Report:", classification_report(yTest, yPredictions))
+
+
+    if save:
+        dump(classifier, 'RandomForestQueryResponseClassifier.joblib')
+
+def trainRandomForestClassifierDomainName(whiteList, blackList, ngramRangeTupleInclusive, testSize = 0.2, save = True, fixRandom = True, n_estimators = 100):
+
+    # We will mark 1 for whitelisted domains, 0 for blacklisted domains. Purpose is to label and teach the model.
+    labels = [1] * len(whiteList) + [0] * len(blackList)
+
+    allDomains = whiteList + blackList
+
+    ngramRange = ngramRangeTupleInclusive 
+
+    # The analyser parameter determines whether a word should be encoded or just individual characters
+    # Since domain names can be jumbled, i used characters encoding.
+    countVectoriser = CountVectorizer(analyzer='char', ngram_range=ngramRange)
+
+    # Learn the vocabulary dictionary and return document-term matrix.
+    X = countVectoriser.fit_transform(allDomains)
+
+    XTrain, XTest,yTrain, yTest, classifier = None, None, None, None, None
+
+    if fixRandom:
+        XTrain, XTest, yTrain, yTest = train_test_split(X, labels, test_size=testSize, random_state=1)
+
+        classifier = RandomForestClassifier(n_estimators=100, random_state=1)
+    else: 
+        XTrain, XTest, yTrain, yTest = train_test_split(X, labels, test_size=testSize)
+
+        classifier = RandomForestClassifier(n_estimators=100)
+
+    classifier.fit(XTrain, yTrain) # Learns actual output from input
+
+    yPredictions = classifier.predict(XTest) # Tests on test dataset. Used for evaluation
+
+    print("Accuracy:", accuracy_score(yTest, yPredictions))
+    print("\n\n\n")
+    print("Classification Report:", classification_report(yTest, yPredictions))
+
+
+    if save:
+        dump(countVectoriser, 'CountVectoriser.joblib')
+        dump(classifier, 'RandomForestDomainNameClassifier.joblib')
+
+def loadCountVectoriser():
+    try:
+        return load('CountVectoriser.joblib') 
+    except FileNotFoundError:
+        print("CountVectoriser.joblib file not found.")
+        raise
+
+def loadRandomForestQueryResponseClassifier():
+    
+    try:
+        return load('RandomForestQueryResponseClassifier.joblib') 
+    except FileNotFoundError:
+        print("RandomForestQueryResponseClassifier.joblib file not found.")
+        raise
+
+def loadRandomForestDomainNameClassifier():
+    
+    try:
+        return load('RandomForestDomainNameClassifier.joblib') 
+    except FileNotFoundError:
+        print("RandomForestDomainNameClassifier.joblib file not found.")
+        raise
+
+def predictQueryResponse(encodedQueryResponsePacket):
+    classifier = loadRandomForestQueryResponseClassifier()
+
+    predictions = classifier.predict(encodedQueryResponsePacket)
+    for prediction in predictions:
+        if prediction == 0:
+            print("Query response packet is safe.")
+        else:
+            print("Query response packet is suspicious.")
+
+
+
+def predictDomainName(newDomainsInList):
+    countVectoriser = loadCountVectoriser()
+    classifier = loadRandomForestDomainNameClassifier()
+    Xnew = countVectoriser.transform(newDomainsInList)
+
+    predictions = classifier.predict(Xnew)
+    for domain, prediction in zip(newDomainsInList, predictions):
+        if prediction == 0:
+            print(f"{domain}: DGA detected")
+        else:
+            print(f"{domain}: Legitimate")
+
+
+print("Checking if Random Forest classifier for domain name is built...")
+try:
+    countVectoriser = loadCountVectoriser()
+    classifier = loadRandomForestDomainNameClassifier()
+    print("Random Forest classifier for domain name is built.")
+except FileNotFoundError: # If the count vectoriser and classifier has not been built yet, build it now.
+
+    print("Random Forest classifier for domain name is not yet built. Building it now...")
+    # I hypothesise that there are commonly there are 2 to 4 characters in each subdomain / TLD
+    # So the following ngram shall detect sequences of 2 to 4 characters and build a vocabulary out of it.
+    ngramRange = (2,4)
+
+    whiteListedDomains, blackListedDomains = loadDataset.getWhiteBlackListDataset()
+
+    trainRandomForestClassifierDomainName(whiteListedDomains, blackListedDomains, ngramRange)
+
+print("The Random Forest classifier for domain name is already built and ready for prediction.\n")
+
+print("Checking if Random Forest classifier for query and response check is built...")
+try:
+    classifier = loadRandomForestQueryResponseClassifier()
+except FileNotFoundError: # If the count vectoriser and classifier has not been built yet, build it now.
+
+    print("Random Forest classifier for query and response checks is not yet built. Building it now...")
+    labels, encodedData = loadDataset.getQueryResponseAndLengthDataset()
+    trainRandomForestClassifierQueryResponse(labels, encodedData)
+
+print("The Random Forest classifier for query and response check is already built and ready for prediction.\n")
+
+
+
+'''
+
+# Now we can test we any domains in a list form:
+
+validDomains = [
+    "example.com",
+    "amazon.com",
+    "microsoft.com",
+    "twitter.com",
+    "instagram.com",
+    "wikipedia.org",
+    "reddit.com",
+    "stackoverflow.com",
+    "github.com",
+    "yahoo.com",
+    "www.google.com",
+    "mail.yahoo.com",
+    "shopping.amazon.com",
+    "blog.wordpress.com",
+    "news.cnn.com",
+    "support.apple.com",
+    "drive.google.com",
+    "login.microsoft.com",
+    "images.google.com",
+    "mail.google.com",
+    "store.apple.com",
+    "calendar.google.com",
+    "maps.google.com",
+    "mail.live.com",
+    "docs.google.com",
+    "mail.yahoo.co.uk"
+]
+
+suspiciousDomains = [
+    "u3rv8p.zxi9mf.ow6.info.oifsdug8du",
+    "a7d5xasdq2v6h4.t6w8e9.ds.sp9o8i7zzdshuixh",
+    "j3n5k7.x8c9v2.y1vdsdrdsadsg.l0asdm9n8",
+    "f8r7w4sdasvdsu2i3o1.e5r6t7.d.k9j8h7adsd",
+    "q6e5d4r3vdsvd546546svdsvs5423dvsdv2y1z9.r8q7w6.adsfdsfd.p0o9i8hpifdgihu.2721853",
+    "m4b6v2.n9c7x3.ow6d8a.cos435m.b3v5n7",
+    "k7i8h9.gfds3f4d5.t6r7e8.hjkhjb435jkjiszdsfsdf.j2k3l4",
+    "s9d8ffsd7g6.h5j4k3sfdrg.q2w3e4.net.z1x9c8",
+    "p6o5i4u3.y8t7r6.qfd2w3e4.dsdhkh.v9b8n7",
+    "w2e3r4tf4.b5n6m7.q8w9e0.org.d9s8a7",
+    "l5k6jfsdf7.q8w9e0.o1i2u3.biadsz.f4d5s6",
+    "n2b3sdfdsdm4.p5osdffd6i7.y8t9r0.nehgft.g1h2j3",
+    "i9u8y7.q6w5e4.r3t2y1.orfg.f4d5s6",
+    "t4r5ed3m4.q5w6e7.t8r9y0.orgfhg.g1h2j3",
+    "q8w9e0rfsdsf1.t2fdy3u4.i5o6p7.inf21fo.f8d9s0",
+    "a9s8dsdf7f6.x5c4v3.z2x1c9.ne21t.b8n7m6",
+    "o3i4u5dss7rfdsde9w0q1sdfdfi5gsz.f2d3s4",
+    "j1k2l3.g4h5j6.e7d8f9.apsdiufiauds9fusd.v0b9n8",
+    "u3i4ofsdsffd5y6.e7w8r9.siaih.u0i1o2",
+    "o3i4u5.p6o7i8.r9t0y1.lifeahu.q2w3e4",
+    "a9sfs4b5sf4s5d6.r7t8y9.lifeasd.f0b1n2",
+    "p9o8i7f.fds.f6g5h4.j3k2l1.net.z0x9c8",
+    "ef8st9fdsy0u1i2.o3p4i5.biffdsfz.m6n7b8",
+    "w9e8r7.t6yf5u4.z3x2c1.dsfd.q0o9i8",
+    "a9sd8s9d0.r1t2y3.dsbiz.asds344.dad.fds323.hgf495893.af",
+    "s3d4.f5f.dfsd1t2y3.u4i5o6p7.adfdsfds767fsd.a8s9d0",
+    "d4f5gf6.q7w8e9.r1t2ydfsr1t2y3.daf.u4i5o6",
+    "q8w9e0.r1t2ff.dy3.u4i5o6p7.com.a8s9d0",
+    "dsfdf5sfd6.q7w8e9.r1t2y3.bdsdfiz.u4i5o6",
+    "w5e.6r7.q8w9e0.r1t2y3.infodasfsf.u4i5o6"
+]
+
+
+predictDomainName(validDomains)
+predictDomainName(suspiciousDomains)
+
+'''
