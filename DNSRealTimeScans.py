@@ -29,25 +29,28 @@ We want to mitigate Domain Generation Attacks here. Possibly using machine learn
 def checkPackets(packetsList):
     for packet in packetsList:
         print()
-        encodedQueryResponsePacket = queryResponseCheck(packet)
-
+        encodedQueryResponsePacket = encodePacketQueryResponse(packet)
+        packetDomainName = None
         if packet.haslayer(DNSQR) and packet[DNSQR].qname:
-            domainName = packet[DNSQR].qname.decode() 
-            print("Packet's domain name:", domainName)
+            packetDomainName = packet[DNSQR].qname.decode()
         elif packet.haslayer(DNSRR) and packet[DNSRR].rrname:
-            domainName = packet[DNSRR].rrname.decode()
-            print("Packet's domain name:", domainName)
+            packetDomainName = packet[DNSRR].rrname.decode()
         else:
             IPAddress = packet[IP].src
             print("Packet's source IP address:", IPAddress)
 
+        if packetDomainName:
+            print("Packet's domain name:", packetDomainName)
+            RandomForest.predictDomainName([packetDomainName])
+        else:
+            print("This packet has no domain name!")
         RandomForest.predictQueryResponse(encodedQueryResponsePacket)
 
 
         #TODO This is just for checks. Can remove eventually
         #viewDNSPropertiesOfPackets(packet)
 
-        checkPacketLengths(packet)
+        checkQueryResponseLengths(packet) # Isolation Forest checks for query and response lengths
 
 commonDNSQueryTypes = [1, 28, 5, 12, 2, 15, 6, 16]
 commonDNSReturnCodes = [0, 2, 3, 5]
@@ -57,8 +60,7 @@ def extractPacketsWithoutTimestamp(sniffedPackets):
     # Returns a list of just the packets without the timestamps
     return [element[0] for element in sniffedPackets]
 
-def queryResponseCheck(packet):
-    print("Packet is being processed for query check...")
+def encodePacketQueryResponse(packet):
     suspicious = False
     DNSPacketEncodedForRandomForest = []
 
@@ -104,24 +106,15 @@ def queryResponseCheck(packet):
 
 
 
-def checkPacketLengths(packet): # DNS exfiltration or DNS tunnelling
+def checkQueryResponseLengths(packet): # DNS exfiltration or DNS tunnelling
     if DNS in packet:
         if packet.haslayer(DNSQR):
             if packet[DNSQR].qname:
-                results = IsolationForest.predictQueryLength([len(packet[DNSQR].qname)])[0]
-                if results == -1:
-                    print("Abnormal query name length detected!")
+                IsolationForest.predictQueryLength([len(packet[DNSQR].qname)])
 
         elif packet.haslayer(DNSRR):
             if packet[DNSRR].rrname:
-                results = IsolationForest.predictResponseLength([len(packet[DNSRR].rrname)])[0]
-                if results == -1:
-                    print("Abnormal response name length detected!")
-
-
-    # Packet length should be of the norm.
-    # We can make use of Isolation forest to do this check for this field.
-
+                IsolationForest.predictResponseLength([len(packet[DNSRR].rrname)])
 
 def analysePacketFrequency(queryRateThreshold, responseRateThreshold, domainQueryPercentageThreshold, domainResponsePercentageThreshold):
     timeWindow = 60

@@ -82,17 +82,23 @@ def predictQueryLength(list_): # Uses Isolation Forest algorithm to determine wh
     isolationForestQueryLength = loadIsolationForestQueryLength()
     list_ = wrapListElementsIfPossible(list_)
     if verifyWrappedListFormat(list_):
-        results = isolationForestQueryLength.predict(list_)
-        print("Abnormalities results:", results)
-        return results
+        result = isolationForestQueryLength.predict(list_)[0]
+        if result == 1:
+            print("Isolation Forest (Query Length): NORMAL")
+        else:
+            print("Isolation Forest (Query Length): ABNORMALY")
+        return result
 
 def predictResponseLength(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
     isolationForestResponseLength = loadIsolationForestResponseLength()
     list_ = wrapListElementsIfPossible(list_)
     if verifyWrappedListFormat(list_):
-        results = isolationForestResponseLength.predict(list_)
-        print("Abnormalities results:", results)
-        return results
+        result = isolationForestResponseLength.predict(list_)[0]
+        if result == 1:
+            print("Isolation Forest (Response Length): NORMAL")
+        else:
+            print("Isolation Forest (Response Length): ABNORMALY")
+        return result
 
 def verifyWrappedListFormat(list_):
     parentFunction = inspect.stack()[1].function # Get the caller function. Just for printing

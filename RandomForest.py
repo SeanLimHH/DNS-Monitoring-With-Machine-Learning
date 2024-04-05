@@ -211,9 +211,9 @@ def predictQueryResponse(encodedQueryResponsePacket):
     predictions = classifier.predict(encodedQueryResponsePacket)
     for prediction in predictions:
         if prediction == 0:
-            print("Query response packet is safe.")
+            print("Random Forest (Query / Response Lengths): NORMAL")
         else:
-            print("Query response packet is suspicious.")
+            print("Random Forest (Query / Response Lengths): ABNORMALY")
 
 
 
@@ -225,16 +225,15 @@ def predictDomainName(newDomainsInList):
     predictions = classifier.predict(Xnew)
     for domain, prediction in zip(newDomainsInList, predictions):
         if prediction == 0:
-            print(f"{domain}: DGA detected")
+            print(f"Random Forest (Domain Name): ABNORMALY")
         else:
-            print(f"{domain}: Legitimate")
+            print(f"Random Forest (Domain Name): NORMAL")
 
 
 print("Checking if Random Forest classifier for domain name is built...")
 try:
     countVectoriser = loadCountVectoriser()
     classifier = loadRandomForestDomainNameClassifier()
-    print("Random Forest classifier for domain name is built.")
 except FileNotFoundError: # If the count vectoriser and classifier has not been built yet, build it now.
 
     print("Random Forest classifier for domain name is not yet built. Building it now...")
