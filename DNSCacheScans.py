@@ -1,28 +1,57 @@
 from services import VirusTotalAPI, URLScanAPI
 from controller import DNSResolver
 from controller.util import DNSResolverParsing
-#import RandomForest
+import pandas as pd
+
 def signatureBasedScans(domainIPAddressesToCheck):
     # VirusTotal and or URLScan
-    results = dict()
+    domainResults = dict()
+    domainIPAddressResults = dict()
     for domain in domainIPAddressesToCheck:
         domainScanResult = VirusTotalAPI.VirusTotalScanDomain(domain)
+        domainIPAddressResults[domain] = {}
         if domainScanResult:
-            results[domain] = {'Domain scan result': domainScanResult}
+            domainResults[domain] = domainScanResult
         else:
-            results[domain] = {'Domain scan result': 'N/A'}
+            domainResults[domain] = {'N/A'}
         for IPAddress in domainIPAddressesToCheck[domain]:
-            results[domain][IPAddress] = VirusTotalAPI.VirusTotalScanIPAddress(IPAddress)
-    for result in results:
-        print(result, ":", results[result]['Domain scan result'])
-        for IPAddress, IPAddressResult in {key: value for key, value in results[result].items() if key != 'Domain scan result'}.items():
-            print(IPAddress,":", IPAddressResult)
+            domainIPAddressResults[domain][IPAddress] = VirusTotalAPI.VirusTotalScanIPAddress(IPAddress)
+            print("domainIPAddressResults",domainIPAddressResults)
+    return domainResults, domainIPAddressResults
 
-'''
-def domainNameScan(domainIPAddressesToCheck):
-    # Uses RandomForest
-    RandomForest.predict(domainsList)'''
+def initialiseAbnormalScanResultsClassifier(scanResultsMatrix):
+    print("Checking if Isolation Forest classifier for Virus Total Scan Results is built...")
+    try:
+        isolationForestVirusTotalResults = IsolationForest.loadIsolationForestVirusTotalResults()
+    except FileNotFoundError:
+        print("Isolation Forest algorithm for Virus Total Scan Results is not yet set up. Setting it up now...")
+        IsolationForest.buildIsolationForestResponseLength(scanResultsMatrix)
+
+    print("The Isolation Forest algorithm for Virus Total Scan Results is set up and ready for prediction.\n")
+
+
+def convertDictionaryResultsToMatrix(data):
+    
+    df = pd.DataFrame.from_dict(data, orient='index') # Keys of dictionary becomes the row labels.
+    
+    return df[['malicious', 'suspicious', 'undetected', 'harmless', 'timeout']].values
+
+def convertSignatureScanResultsToMatrix(domainIPAddressResults):
+
+    matrix = []
+    for domainName in domainIPAddressResults:
+        # print("\n\n\nDomain name:", domainName)
+        for IPAddress in domainIPAddressResults[domainName]:
+            # print("IP Address", IPAddress)
+            # print("Assessment of IP Address:", domainIPAddressResults[domainName][IPAddress])
+
+            matrix.append(list(domainIPAddressResults[domainName][IPAddress].values))
+    return matrix
 
 domainIPAddressesToCheck = DNSResolver.getDNSRecordsDomainIPAddress()
+domainResults, domainIPAddressResults = signatureBasedScans(domainIPAddressesToCheck)
 
-signatureBasedScans(domainIPAddressesToCheck)
+
+scanResultsMatrix = convertSignatureScanResultsToMatrix(domainIPAddressResults)
+initialiseAbnormalScanResultsClassifier(scanResultsMatrix)
+IsolationForest.predictAbnormalScanResults(scanResultsMatrix)

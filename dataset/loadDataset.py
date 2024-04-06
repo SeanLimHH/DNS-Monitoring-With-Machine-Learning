@@ -17,7 +17,7 @@ def getQueryNameLengthNormalTunnelingData():
 def getResourceRecordNameLengthNormalTunnelingData():
     df = getTunnelingData()
     df = df[df['label'] == 0] # We only want "non-malicious dataset"
-    return df['an_rrname_len'].tolist()
+    return df['ar_rrname_len'].tolist()
 
 def getWhiteAndBlacklistTunnelingData():
     whiteListedDomains = []
@@ -62,9 +62,16 @@ def getWhiteBlackListDataset():
     return whiteListAll, blackListAll
 
 
-def getQueryResponseAndLengthDataset():
+def getQueryAndLengthDataset():
     df = getTunnelingData()
-    df['label'] = df['label'].apply(lambda x: 1 if x != 0 else x)
+    df['label'] = df['label'].apply(lambda x: 1 if x != 0 else x) # Convert all non-zero to 1. 1 means malicious.
     labels = df['label'].tolist()
-    features = df[['qd_qtype', 'qd_qname_len', 'ar_type', 'ar_rdata_len']].values.tolist()
+    features = df[['qd_qtype', 'qd_qname_len']].values.tolist()
+    return labels, features
+
+def getResponseAndLengthDataset():
+    df = getTunnelingData()
+    df['label'] = df['label'].apply(lambda x: 1 if x != 0 else x) # Convert all non-zero to 1. 1 means malicious.
+    labels = df['label'].tolist()
+    features = df[['ar_type', 'ar_rdata_len']].values.tolist()
     return labels, features

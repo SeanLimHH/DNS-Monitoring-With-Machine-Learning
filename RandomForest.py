@@ -113,10 +113,12 @@ from sklearn.metrics import classification_report, accuracy_score
 from joblib import dump, load
 from dataset import loadDataset
 
+def trainRandomForestClassifierQueryResponse(labels, encodedData, testSize = 0.2, fixRandom = True, n_estimators = 100 ):
 
-def trainRandomForestClassifierQueryResponse(labels, encodedData, testSize = 0.2, save = True, fixRandom = True, n_estimators = 100 ):
-
-    # encodedData: df[['qd_qtype', 'qd_qname_len', 'ar_type', 'ar_rdata_len']]
+    # encodedData has two flavours: 
+    # 1. Query: df[['qd_qtype', 'qd_qname_len']] or
+    # 2. Response: df[['ar_type', 'ar_rdata_len']]
+    # Since their training methods are more or less the same, i can re-use this function.
 
     # Labels: 0 means non-malicious, 1 means malicious
     XTrain, XTest,yTrain, yTest, classifier = None, None, None, None, None
@@ -138,9 +140,7 @@ def trainRandomForestClassifierQueryResponse(labels, encodedData, testSize = 0.2
     print("\n\n\n")
     print("Classification Report:", classification_report(yTest, yPredictions))
 
-
-    if save:
-        dump(classifier, 'RandomForestQueryResponseClassifier.joblib')
+    return classifier
 
 def trainRandomForestClassifierDomainName(whiteList, blackList, ngramRangeTupleInclusive, testSize = 0.2, save = True, fixRandom = True, n_estimators = 100):
 
@@ -189,12 +189,20 @@ def loadCountVectoriser():
         print("CountVectoriser.joblib file not found.")
         raise
 
-def loadRandomForestQueryResponseClassifier():
+def loadRandomForestQueryClassifier():
     
     try:
-        return load('RandomForestQueryResponseClassifier.joblib') 
+        return load('RandomForestQueryClassifier.joblib') 
     except FileNotFoundError:
-        print("RandomForestQueryResponseClassifier.joblib file not found.")
+        print("RandomForestQueryClassifier.joblib file not found.")
+        raise
+
+def loadRandomForestResponseClassifier():
+    
+    try:
+        return load('RandomForestResponseClassifier.joblib') 
+    except FileNotFoundError:
+        print("RandomForestResponseClassifier.joblib file not found.")
         raise
 
 def loadRandomForestDomainNameClassifier():
@@ -205,17 +213,24 @@ def loadRandomForestDomainNameClassifier():
         print("RandomForestDomainNameClassifier.joblib file not found.")
         raise
 
-def predictQueryResponse(encodedQueryResponsePacket):
-    classifier = loadRandomForestQueryResponseClassifier()
-
-    predictions = classifier.predict(encodedQueryResponsePacket)
+def predictQueryLength(encodedPacketQuery):
+    classifier = loadRandomForestQueryClassifier()
+    predictions = classifier.predict(encodedPacketQuery)
     for prediction in predictions:
         if prediction == 0:
-            print("Random Forest (Query / Response Lengths): NORMAL")
+            print("Random Forest (Query Length): NORMAL")
         else:
-            print("Random Forest (Query / Response Lengths): ABNORMALY")
+            print("Random Forest (Query Length): ABNORMALY")
 
+def predictResponseLength(encodedPacketResponse):
+    classifier = loadRandomForestResponseClassifier()
 
+    predictions = classifier.predict(encodedPacketResponse)
+    for prediction in predictions:
+        if prediction == 0:
+            print("Random Forest (Response Length): NORMAL")
+        else:
+            print("Random Forest (Response Length): ABNORMALY")
 
 def predictDomainName(newDomainsInList):
     countVectoriser = loadCountVectoriser()
@@ -234,7 +249,7 @@ print("Checking if Random Forest classifier for domain name is built...")
 try:
     countVectoriser = loadCountVectoriser()
     classifier = loadRandomForestDomainNameClassifier()
-except FileNotFoundError: # If the count vectoriser and classifier has not been built yet, build it now.
+except FileNotFoundError:
 
     print("Random Forest classifier for domain name is not yet built. Building it now...")
     # I hypothesise that there are commonly there are 2 to 4 characters in each subdomain / TLD
@@ -247,17 +262,27 @@ except FileNotFoundError: # If the count vectoriser and classifier has not been 
 
 print("The Random Forest classifier for domain name is already built and ready for prediction.\n")
 
-print("Checking if Random Forest classifier for query and response check is built...")
+print("Checking if Random Forest classifier for query checks is built...")
 try:
-    classifier = loadRandomForestQueryResponseClassifier()
-except FileNotFoundError: # If the count vectoriser and classifier has not been built yet, build it now.
+    classifier = loadRandomForestQueryClassifier()
+except FileNotFoundError:
+    print("Random Forest classifier for query checks is not yet built. Building it now...")
+    labels, encodedData = loadDataset.getQueryAndLengthDataset()
+    classifier = trainRandomForestClassifierQueryResponse(labels, encodedData)
+    dump(classifier, 'RandomForestQueryClassifier.joblib')
 
-    print("Random Forest classifier for query and response checks is not yet built. Building it now...")
-    labels, encodedData = loadDataset.getQueryResponseAndLengthDataset()
-    trainRandomForestClassifierQueryResponse(labels, encodedData)
+print("The Random Forest classifier for query checks is already built and ready for prediction.\n")
 
-print("The Random Forest classifier for query and response check is already built and ready for prediction.\n")
+print("Checking if Random Forest classifier for response checks is built...")
+try:
+    classifier = loadRandomForestResponseClassifier()
+except FileNotFoundError:
+    print("Random Forest classifier for response checks is not yet built. Building it now...")
+    labels, encodedData = loadDataset.getResponseAndLengthDataset()
+    classifier = trainRandomForestClassifierQueryResponse(labels, encodedData)
 
+    dump(classifier, 'RandomForestResponseClassifier.joblib')
+print("The Random Forest classifier for response checks is already built and ready for prediction.\n")
 
 
 '''

@@ -29,7 +29,6 @@ We want to mitigate Domain Generation Attacks here. Possibly using machine learn
 def checkPackets(packetsList):
     for packet in packetsList:
         print()
-        encodedQueryResponsePacket = encodePacketQueryResponse(packet)
         packetDomainName = None
         if packet.haslayer(DNSQR) and packet[DNSQR].qname:
             packetDomainName = packet[DNSQR].qname.decode()
@@ -44,14 +43,23 @@ def checkPackets(packetsList):
             RandomForest.predictDomainName([packetDomainName])
         else:
             print("This packet has no domain name!")
-        RandomForest.predictQueryResponse(encodedQueryResponsePacket)
 
+        encodedPacketQuery = encodePacketQuery(packet)
+        if encodedPacketQuery: # Not none implies that this packet is a query.
+            RandomForest.predictQueryLength(encodedPacketQuery)
+        else:
+            encodedPacketResponse = encodePacketResponse(packet)
+            print("Response packetsss", encodedPacketResponse)
+            RandomForest.predictResponseLength(encodedPacketResponse)
 
         #TODO This is just for checks. Can remove eventually
         #viewDNSPropertiesOfPackets(packet)
 
-        checkQueryResponseLengths(packet) # Isolation Forest checks for query and response lengths
+        # The following is another set of checks using another algorithm - Isolation forest
+        # Same checks, for query length and responses
+        checkQueryResponseLengths(packet) 
 
+        
 commonDNSQueryTypes = [1, 28, 5, 12, 2, 15, 6, 16]
 commonDNSReturnCodes = [0, 2, 3, 5]
 sniffedPackets = []
@@ -60,50 +68,49 @@ def extractPacketsWithoutTimestamp(sniffedPackets):
     # Returns a list of just the packets without the timestamps
     return [element[0] for element in sniffedPackets]
 
-def encodePacketQueryResponse(packet):
-    suspicious = False
+def encodePacketQuery(packet):
     DNSPacketEncodedForRandomForest = []
 
-    # The structure is df[['qd_qtype', 'qd_qname_len', 'ar_type', 'ar_rdata_len']]
+    # The structure is df[['qd_qtype', 'qd_qname_len']]
     if DNS in packet:
         DNSPacket = packet[DNS]
 
-        if DNSPacket.qd.qtype:
-            DNSPacketEncodedForRandomForest.append(DNSPacket.qd.qtype)
-        else:
-            DNSPacketEncodedForRandomForest.append(0)
-
 
         if packet.haslayer(DNSQR):
+            if DNSPacket.qd.qtype:
+                DNSPacketEncodedForRandomForest.append(DNSPacket.qd.qtype)
+            else:
+                DNSPacketEncodedForRandomForest.append(0)
+
             if packet[DNSQR].qname:
                 DNSPacketEncodedForRandomForest.append(len(packet[DNSQR].qname))
             else:
                 DNSPacketEncodedForRandomForest.append(0)
-        else:
-            DNSPacketEncodedForRandomForest.append(0)
+        return [DNSPacketEncodedForRandomForest]
 
-        if DNSPacket.rcode:
-            DNSPacketEncodedForRandomForest.append(DNSPacket.rcode)
-        else:
-            DNSPacketEncodedForRandomForest.append(0)
+
+def encodePacketResponse(packet):
+    DNSPacketEncodedForRandomForest = []
+
+    # The structure is df[['ar_type', 'ar_rdata_len']]
+    if DNS in packet:
+        DNSPacket = packet[DNS]
 
         if packet.haslayer(DNSRR):
-            if packet[DNSRR].rdata:
-                DNSPacketEncodedForRandomForest.append(len(packet[DNSRR].rdata))
-            else:
-                DNSPacketEncodedForRandomForest.append(0)
-        else:
-            DNSPacketEncodedForRandomForest.append(0)
+            for rr in packet[DNSRR]:
+                
+                print("Resource Record Type:", rr.type)
+                print("RDATA Length:", len(rr.rdata))
+                if rr.type:
+                    DNSPacketEncodedForRandomForest.append(rr.type)
+                else:
+                    DNSPacketEncodedForRandomForest.append(0)
 
-        return [DNSPacketEncodedForRandomForest]
-    else:
-        print("Packet does not contain DNS information.")
-
-    return suspicious
-
-    # Random forest would be strong here due to categorical nature. Bundle with packet length
-    # Use random forest to independently and separate scan the query type and response type.
-
+                if rr.rdata:
+                    DNSPacketEncodedForRandomForest.append(len(rr.rdata))
+                else:
+                    DNSPacketEncodedForRandomForest.append(0)
+            return [DNSPacketEncodedForRandomForest]
 
 
 def checkQueryResponseLengths(packet): # DNS exfiltration or DNS tunnelling
@@ -257,26 +264,17 @@ def removeTrailingDot(domainName):
         return domainName.rstrip(".")
     return domainName
 
+def run(queryRateThreshold = 100,
+        responseRateThreshold = 50, 
+        domainQueryPercentageThreshold = 0.3,
+        domainResponsePercentageThreshold = 0.3):
+    previousTimeAnalysis = time.time()
+    while True:
+        sniff(filter="udp port 53", prn=storePackets, count = 5) # Remove count parameter to sniff forever
+        #TODO: You should increase the count once you are confident the code works. Maybe to 10 or something.
 
-#TODO: Set your threshold for these values!
-queryRateThreshold = 100  
-responseRateThreshold = 50
-domainQueryPercentageThreshold = 0.3
-domainResponsePercentageThreshold = 0.3
-
-previousTimeAnalysis = time.time()
-while True:
-    sniff(filter="udp port 53", prn=storePackets, store=0, count = 5) # Remove count parameter to sniff forever
-    #TODO: You should increase the count once you are confident the code works. Maybe to 10 or something.
-
-    # At this line we already store the sniffed packets
-
-
-    checkPackets(extractPacketsWithoutTimestamp(sniffedPackets))
-    
-    if time.time() - previousTimeAnalysis >= 60: # repeat the checks every 60 seconds.
+        checkPackets(extractPacketsWithoutTimestamp(sniffedPackets))
         
-        
-        
-        analysePacketFrequency(queryRateThreshold ,responseRateThreshold,domainQueryPercentageThreshold, domainResponsePercentageThreshold)
-        previousTimeAnalysis = time.time()
+        if time.time() - previousTimeAnalysis >= 60: # repeat the checks every 60 seconds.
+            analysePacketFrequency(queryRateThreshold ,responseRateThreshold,domainQueryPercentageThreshold, domainResponsePercentageThreshold)
+            previousTimeAnalysis = time.time()

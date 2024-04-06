@@ -5,9 +5,6 @@ from .util import DNSRecordsParsing
 
 
 resolver = dns.resolver.Resolver()
-print(resolver.nameservers)
-
-print(resolver.cache)
 # Returns ['8.8.8.8', '8.8.4.4', '8.8.8.8'] on my pc
 
 def getDNSRecordsWindowsRaw():
@@ -17,7 +14,7 @@ def getDNSRecordsWindowsRaw():
         if dnsCacheResults.returncode == 0:
             with open("DNSRecursiveResolverCacheRaw.txt", 'w', encoding='utf-8') as f:
                 f.write(dnsCacheResults.stdout)
-            print(f"Output saved to 'DNSRecursiveResolverCacheRaw.txt'.")
+            print(f"DNS cache records are saved in 'DNSRecursiveResolverCacheRaw.txt'.")
             return dnsCacheResults.stdout # Return textual format. Used for processing
         else:
             print("Error:", dnsCacheResults.stderr)
@@ -45,13 +42,14 @@ def cleanDNSRecords(records):
 
 
     cleanedGroupedRecords = DNSRecordsParsing.clusterIntoGroups(cleanedRecords,'Record Name')
-
+    '''
     for group in cleanedGroupedRecords:
         print("\n\nRecord Name:",group['Record Name'])
         for record in group['Records']:
             print(record)
 
     print("End of clean DNS record")
+    '''
     return cleanedGroupedRecords
 
 

@@ -6,3 +6,4 @@ pyvenv.cfg
 DNSRecursiveResolverCacheRaw.txt
 __pycache__
 share
+RandomForestDomainNameClassifier.joblib

@@ -16,8 +16,6 @@ def getDNSRecordsDomainIPAddress():
                 if DNSRecord['Record Name'] not in DNSRecordsResults:
                     DNSRecordsResults[DNSRecord['Record Name']] = []
                 DNSRecordsResults[DNSRecord['Record Name']].append(record[1])
-
-    print(DNSRecordsResults)
     return DNSRecordsResults
 
 def getDNSRecordsDomains():
@@ -36,6 +34,3 @@ def getDNSRecordsWindows():
     records = DNSCacheProcessingForWindows.cleanDNSRecords(records)
 
     return records
-
-getDNSRecordsDomainIPAddress()
-getDNSRecordsWindows()

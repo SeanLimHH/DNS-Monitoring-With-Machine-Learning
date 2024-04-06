@@ -48,6 +48,16 @@ from joblib import dump, load
 from dataset import loadDataset
 import inspect
 
+def buildIsolationForestVirusTotalResults(list_, save = True):
+    list_ = wrapListElementsIfPossible(list_)
+    if verifyWrappedListFormat(list_):
+        classifier = IsolationForest().fit(list_)
+        if save:
+            dump(classifier, 'IsolationForestVirusTotalResults.joblib')
+
+
+
+
 def buildIsolationForestQueryLength(list_, save = True):
     list_ = wrapListElementsIfPossible(list_)
     if verifyWrappedListFormat(list_):
@@ -63,6 +73,13 @@ def buildIsolationForestResponseLength(list_, save = True):
             dump(classifier, 'IsolationForestResponseLength.joblib')
 
 
+def loadIsolationForestVirusTotalResults():
+    try:
+        return load('IsolationForestVirusTotalResults.joblib')
+    except FileNotFoundError:
+        print("IsolationForestVirusTotalResults.joblib file not found.")
+        raise
+
 def loadIsolationForestQueryLength():
     try:
         return load('IsolationForestQueryLength.joblib')
@@ -76,6 +93,18 @@ def loadIsolationForestResponseLength():
     except FileNotFoundError:
         print("IsolationForestResponseLength.joblib file not found.")
         raise
+
+
+def predictVirusTotalResults(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
+    isolationForestVirusTotalResults = loadIsolationForestVirusTotalResults()
+    list_ = wrapListElementsIfPossible(list_)
+    if verifyWrappedListFormat(list_):
+        result = isolationForestVirusTotalResults.predict(list_)[0]
+        if result == 1:
+            print("Isolation Forest (Virus Total Scan Result): NORMAL")
+        else:
+            print("Isolation Forest (Virus Total Scan Result): ABNORMALY")
+        return result
 
 
 def predictQueryLength(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
@@ -118,16 +147,19 @@ def wrapListElementsIfPossible(possibleList):
     return possibleList
 
 
+print("Checking if Isolation Forest classifier for query length is built...")
 try:
     isolationForestQueryLength = loadIsolationForestQueryLength()
 except FileNotFoundError:
+    
     print("Isolation Forest algorithm for query length not yet set up. Setting it up now...")
     normalQueryLengthData = loadDataset.getQueryNameLengthNormalTunnelingData()
     buildIsolationForestQueryLength(normalQueryLengthData)
 
-    print("Isolation Forest algorithm for query length is set up and ready for prediction.")
+print("The Isolation Forest algorithm for query length is set up and ready for prediction.\n")
 
 
+print("Checking if Isolation Forest classifier for response length is built...")
 try:
     isolationForestResponseLength = loadIsolationForestResponseLength()
 except FileNotFoundError:
@@ -135,4 +167,4 @@ except FileNotFoundError:
     normalResponseLengthData = loadDataset.getResourceRecordNameLengthNormalTunnelingData()
     buildIsolationForestResponseLength(normalResponseLengthData)
 
-    print("Isolation Forest algorithm for response length is set up and ready for prediction.")
+print("The Isolation Forest algorithm for response length is set up and ready for prediction.\n")
