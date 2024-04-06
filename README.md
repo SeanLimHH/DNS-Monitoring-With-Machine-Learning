@@ -2,17 +2,7 @@
 
 ### To Run:
 
-python -m venv .
-
-cd Scripts
-
-activate
-
-cd ..
-
-pip install -r requirement.txt
-
-python DNSScan.py
+python run.py
 
 ### Note:
 
