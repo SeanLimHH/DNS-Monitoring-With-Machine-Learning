@@ -218,9 +218,11 @@ def predictQueryLength(encodedPacketQuery):
     predictions = classifier.predict(encodedPacketQuery)
     for prediction in predictions:
         if prediction == 0:
-            print("Random Forest (Query Length): NORMAL")
+            #print("Random Forest (Query Length): NORMAL")
+            return True
         else:
-            print("Random Forest (Query Length): ABNORMALY")
+            #print("Random Forest (Query Length): ABNORMALY")
+            return False
 
 def predictResponseLength(encodedPacketResponse):
     classifier = loadRandomForestResponseClassifier()
@@ -228,9 +230,11 @@ def predictResponseLength(encodedPacketResponse):
     predictions = classifier.predict(encodedPacketResponse)
     for prediction in predictions:
         if prediction == 0:
-            print("Random Forest (Response Length): NORMAL")
+            #print("Random Forest (Response Length): NORMAL")
+            return True
         else:
-            print("Random Forest (Response Length): ABNORMALY")
+            #print("Random Forest (Response Length): ABNORMALY")
+            return False
 
 def predictDomainName(newDomainsInList):
     countVectoriser = loadCountVectoriser()
@@ -240,10 +244,11 @@ def predictDomainName(newDomainsInList):
     predictions = classifier.predict(Xnew)
     for domain, prediction in zip(newDomainsInList, predictions):
         if prediction == 0:
-            print(f"Random Forest (Domain Name): ABNORMALY")
+            #print(f"Random Forest (Domain Name): ABNORMALY")
+            return False
         else:
-            print(f"Random Forest (Domain Name): NORMAL")
-
+            #print(f"Random Forest (Domain Name): NORMAL")
+            return True
 
 print("Checking if Random Forest classifier for domain name is built...")
 try:

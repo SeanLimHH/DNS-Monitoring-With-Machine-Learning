@@ -1,8 +1,8 @@
 from scapy.all import sniff, DNS, IP, DNSQR, DNSRR, UDP, sr1, ls
 import socket
-import IsolationForest, RandomForest
 import inspect
 import time
+import IsolationForest, RandomForest
 '''
 The motivation here is to have a list of common query types.
 If a packet has a DNS query not in the list of common query types, we could flag it.
@@ -29,6 +29,9 @@ We want to mitigate Domain Generation Attacks here. Possibly using machine learn
 def checkPackets(packetsList):
     for packet in packetsList:
         print()
+        RFDomainName = None
+        RFQuery = None
+        RFResponse = None
         packetDomainName = None
         if packet.haslayer(DNSQR) and packet[DNSQR].qname:
             packetDomainName = packet[DNSQR].qname.decode()
@@ -40,24 +43,35 @@ def checkPackets(packetsList):
 
         if packetDomainName:
             print("Packet's domain name:", packetDomainName)
-            RandomForest.predictDomainName([packetDomainName])
+            RFDomainName = RandomForest.predictDomainName([packetDomainName])
         else:
             print("This packet has no domain name!")
 
         encodedPacketQuery = encodePacketQuery(packet)
         if encodedPacketQuery: # Not none implies that this packet is a query.
-            RandomForest.predictQueryLength(encodedPacketQuery)
+            RFQuery = RandomForest.predictQueryLength(encodedPacketQuery)
         else:
             encodedPacketResponse = encodePacketResponse(packet)
             print("Response packetsss", encodedPacketResponse)
-            RandomForest.predictResponseLength(encodedPacketResponse)
+            RFResponse = RandomForest.predictResponseLength(encodedPacketResponse)
 
-        #TODO This is just for checks. Can remove eventually
-        #viewDNSPropertiesOfPackets(packet)
 
         # The following is another set of checks using another algorithm - Isolation forest
         # Same checks, for query length and responses
-        checkQueryResponseLengths(packet) 
+        IFQueryResponse = checkQueryResponseLengths(packet) 
+
+        verdicts = [RFDomainName, RFQuery, RFResponse, IFQueryResponse]
+
+        suspiciousCount = 0
+
+        for verdict in verdicts:
+            if verdict is False:
+                suspiciousCount += 1
+            
+        if (suspiciousCount/len(verdicts) > 0.5):
+            print("This packet is suspicious!")
+        else:
+            print("This packet is not suspicious.")
 
         
 commonDNSQueryTypes = [1, 28, 5, 12, 2, 15, 6, 16]
@@ -99,8 +113,6 @@ def encodePacketResponse(packet):
         if packet.haslayer(DNSRR):
             for rr in packet[DNSRR]:
                 
-                print("Resource Record Type:", rr.type)
-                print("RDATA Length:", len(rr.rdata))
                 if rr.type:
                     DNSPacketEncodedForRandomForest.append(rr.type)
                 else:
@@ -114,15 +126,16 @@ def encodePacketResponse(packet):
 
 
 def checkQueryResponseLengths(packet): # DNS exfiltration or DNS tunnelling
+    IFQueryResponse = None
     if DNS in packet:
         if packet.haslayer(DNSQR):
             if packet[DNSQR].qname:
-                IsolationForest.predictQueryLength([len(packet[DNSQR].qname)])
+                IFQueryResponse = IsolationForest.predictQueryLength([len(packet[DNSQR].qname)])
 
         elif packet.haslayer(DNSRR):
             if packet[DNSRR].rrname:
-                IsolationForest.predictResponseLength([len(packet[DNSRR].rrname)])
-
+                IFQueryResponse = IsolationForest.predictResponseLength([len(packet[DNSRR].rrname)])
+        return IFQueryResponse
 def analysePacketFrequency(queryRateThreshold, responseRateThreshold, domainQueryPercentageThreshold, domainResponsePercentageThreshold):
     timeWindow = 60
     currentTime = time.time()
@@ -176,24 +189,6 @@ def analysePacketFrequency(queryRateThreshold, responseRateThreshold, domainQuer
             if percentage > domainResponsePercentageThreshold:
                 print(f"Domain {domain} exceeds response percentage threshold: {percentage}%")
 
-
-def viewDNSPropertiesOfPackets(packet): # Could do length check
-    functionName = inspect.stack()[0].function # Get the caller function. Just for printing
-    
-    if DNS in packet:
-        packet = packet[DNS]
-    try:
-        # The following fields are fields we will scrutinise.
-        print("DNS Query:", packet.qd.qname)
-        print("DNS Query Type:", packet.qd.qtype)
-        print("DNS Response:", packet.an.rdata)
-        
-        # The following will check if the domain name matches the ip address.
-        # In scenarios where the packet has multiple IP addresses, we will ignore for now. (error is thrown)
-        # TODO: Do an algorithm for detection for similarity in domain names
-    except Exception as err:
-        print(f"{functionName}(): Unexpected {err=}, {type(err)=}")
-        pass # We ignore because the packet may not have anything required for checks
 
 def viewDNSPacketsSniffed(packet):
     if DNS in packet and IP in packet:
@@ -270,11 +265,11 @@ def run(queryRateThreshold = 100,
         domainResponsePercentageThreshold = 0.3):
     previousTimeAnalysis = time.time()
     while True:
-        sniff(filter="udp port 53", prn=storePackets, count = 5) # Remove count parameter to sniff forever
-        #TODO: You should increase the count once you are confident the code works. Maybe to 10 or something.
-
+        sniff(filter="udp port 53", prn=storePackets, count = 1)
         checkPackets(extractPacketsWithoutTimestamp(sniffedPackets))
         
         if time.time() - previousTimeAnalysis >= 60: # repeat the checks every 60 seconds.
             analysePacketFrequency(queryRateThreshold ,responseRateThreshold,domainQueryPercentageThreshold, domainResponsePercentageThreshold)
             previousTimeAnalysis = time.time()
+            
+run()

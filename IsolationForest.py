@@ -101,10 +101,11 @@ def predictVirusTotalResults(list_): # Uses Isolation Forest algorithm to determ
     if verifyWrappedListFormat(list_):
         result = isolationForestVirusTotalResults.predict(list_)[0]
         if result == 1:
-            print("Isolation Forest (Virus Total Scan Result): NORMAL")
+            #print("Isolation Forest (Virus Total Scan Result): NORMAL")
+            return True
         else:
-            print("Isolation Forest (Virus Total Scan Result): ABNORMALY")
-        return result
+            #print("Isolation Forest (Virus Total Scan Result): ABNORMALY")
+            return False
 
 
 def predictQueryLength(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
@@ -113,10 +114,11 @@ def predictQueryLength(list_): # Uses Isolation Forest algorithm to determine wh
     if verifyWrappedListFormat(list_):
         result = isolationForestQueryLength.predict(list_)[0]
         if result == 1:
-            print("Isolation Forest (Query Length): NORMAL")
+            #print("Isolation Forest (Query Length): NORMAL")
+            return True
         else:
-            print("Isolation Forest (Query Length): ABNORMALY")
-        return result
+            #print("Isolation Forest (Query Length): ABNORMALY")
+            return False
 
 def predictResponseLength(list_): # Uses Isolation Forest algorithm to determine which points are abnormalities
     isolationForestResponseLength = loadIsolationForestResponseLength()
@@ -125,9 +127,10 @@ def predictResponseLength(list_): # Uses Isolation Forest algorithm to determine
         result = isolationForestResponseLength.predict(list_)[0]
         if result == 1:
             print("Isolation Forest (Response Length): NORMAL")
+            return True
         else:
             print("Isolation Forest (Response Length): ABNORMALY")
-        return result
+            return False
 
 def verifyWrappedListFormat(list_):
     parentFunction = inspect.stack()[1].function # Get the caller function. Just for printing

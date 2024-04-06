@@ -4,6 +4,7 @@ from controller.util import DNSResolverParsing
 import pandas as pd
 import IsolationForest
 
+
 def signatureBasedScans(domainIPAddressesToCheck):
     # VirusTotal and or URLScan
     domainResults = dict()
@@ -48,8 +49,6 @@ def convertSignatureScanResultsToMatrix(domainIPAddressResults):
             matrix.append(list(domainIPAddressResults[domainName][IPAddress].values()))
     return matrix
 
-domainIPAddressesToCheck = DNSResolver.getDNSRecordsDomainIPAddress()
-domainResults, domainIPAddressResults = signatureBasedScans(domainIPAddressesToCheck)
 
 '''
 # Performance of isolation forest on new unseen data is pretty poor - it falsely flags out abnormalies
@@ -64,3 +63,21 @@ initialiseAbnormalScanResultsClassifier(scanResultsMatrix)
 for result in scanResultsMatrix:
     IsolationForest.predictVirusTotalResults([result])
 '''
+def prettifyOutput(data):
+    prettifiedOutput = ""
+    for dataset in data:
+        for key, value in dataset.items():
+            prettifiedOutput += f"\n\n\n\nDomain Name: {key}: Results\n"
+            if isinstance(value, set):
+                prettifiedOutput += "    No IP address detected.\n"
+            else:
+                for i, (innerKey, innerValue) in enumerate(value.items(), start=1):
+                    prettifiedOutput += f"    IP address {i} of {key}: {innerKey}: {innerValue}\n"
+    return prettifiedOutput
+
+
+def run():
+    domainIPAddressesToCheck = DNSResolver.getDNSRecordsDomainIPAddress()
+    domainIPAddressResults = signatureBasedScans(domainIPAddressesToCheck)
+    print(prettifyOutput(domainIPAddressResults))
+run()
