@@ -2,6 +2,7 @@ from services import VirusTotalAPI, URLScanAPI
 from controller import DNSResolver
 from controller.util import DNSResolverParsing
 import pandas as pd
+import IsolationForest
 
 def signatureBasedScans(domainIPAddressesToCheck):
     # VirusTotal and or URLScan
@@ -16,16 +17,16 @@ def signatureBasedScans(domainIPAddressesToCheck):
             domainResults[domain] = {'N/A'}
         for IPAddress in domainIPAddressesToCheck[domain]:
             domainIPAddressResults[domain][IPAddress] = VirusTotalAPI.VirusTotalScanIPAddress(IPAddress)
-            print("domainIPAddressResults",domainIPAddressResults)
+
     return domainResults, domainIPAddressResults
 
 def initialiseAbnormalScanResultsClassifier(scanResultsMatrix):
     print("Checking if Isolation Forest classifier for Virus Total Scan Results is built...")
     try:
-        isolationForestVirusTotalResults = IsolationForest.loadIsolationForestVirusTotalResults()
+        isolationForestVirusClassifier = IsolationForest.loadIsolationForestVirusTotalResults()
     except FileNotFoundError:
         print("Isolation Forest algorithm for Virus Total Scan Results is not yet set up. Setting it up now...")
-        IsolationForest.buildIsolationForestResponseLength(scanResultsMatrix)
+        IsolationForest.buildIsolationForestVirusTotalResults(scanResultsMatrix)
 
     print("The Isolation Forest algorithm for Virus Total Scan Results is set up and ready for prediction.\n")
 
@@ -44,14 +45,22 @@ def convertSignatureScanResultsToMatrix(domainIPAddressResults):
         for IPAddress in domainIPAddressResults[domainName]:
             # print("IP Address", IPAddress)
             # print("Assessment of IP Address:", domainIPAddressResults[domainName][IPAddress])
-
-            matrix.append(list(domainIPAddressResults[domainName][IPAddress].values))
+            matrix.append(list(domainIPAddressResults[domainName][IPAddress].values()))
     return matrix
 
 domainIPAddressesToCheck = DNSResolver.getDNSRecordsDomainIPAddress()
 domainResults, domainIPAddressResults = signatureBasedScans(domainIPAddressesToCheck)
 
+'''
+# Performance of isolation forest on new unseen data is pretty poor - it falsely flags out abnormalies
+# when they are all normal data.
+# Hence, this part is experimental and can be ignored.
+
 
 scanResultsMatrix = convertSignatureScanResultsToMatrix(domainIPAddressResults)
 initialiseAbnormalScanResultsClassifier(scanResultsMatrix)
-IsolationForest.predictAbnormalScanResults(scanResultsMatrix)
+
+
+for result in scanResultsMatrix:
+    IsolationForest.predictVirusTotalResults([result])
+'''
