@@ -74,8 +74,6 @@ def checkPackets(packetsList):
             print("This packet is not suspicious.")
 
         
-commonDNSQueryTypes = [1, 28, 5, 12, 2, 15, 6, 16]
-commonDNSReturnCodes = [0, 2, 3, 5]
 sniffedPackets = []
 
 def extractPacketsWithoutTimestamp(sniffedPackets):

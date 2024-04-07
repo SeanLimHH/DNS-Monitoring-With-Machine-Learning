@@ -9,8 +9,8 @@ import os
 currentDirectory = os.path.dirname(os.path.realpath(__file__))
 activateVirtualEnvironment = os.path.join(currentDirectory, "Scripts", "activate")
 
-print("currentDirectory", currentDirectory)
-print("activateVirtualEnvironment", activateVirtualEnvironment)
+#print("currentDirectory", currentDirectory)
+#print("activateVirtualEnvironment", activateVirtualEnvironment)
 
 
 class BackgroundProcess(QThread):
