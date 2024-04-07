@@ -17,7 +17,6 @@ Here is the guide to obtain your API key:
 
 https://docs.virustotal.com/docs/please-give-me-an-api-key
 
-
 With regards to URLScan, it is another database that I had intended to reference.
 
 As of now, i chose not to use it. The reason being is that it does not support more
@@ -30,20 +29,18 @@ Do note that there is a limited amount of calls you can make; after which, the s
 
 ### Activating the Python virtual environment
 
-1. cd Scripts
-2. activate
-3. cd .. 
+cd Scripts && activate && cd ..
 
 ### Deactivating the Python virtual environment
 
-1. cd Scripts
-2. deactivate
-3. cd .. 
- 
+cd Scripts && deactivate && cd ..
+
 ### Running the program - perform this only after Set Up!
 
-1. Run run.pyw
-2. When performing the DNS real time scan for the first time, it will take a long time. This is because it is building the model.
+Ensure that you are in the virtual environment before running the following!
+
+1. run.pyw
+2. When running the Real-Time Monitoring for the first time, it will take a long time. This is because it is building the model.
 
 It is possible to change the duration of the building of the classifier: ngram range in RandomForest.py.
 
@@ -59,9 +56,7 @@ A fast model would be (2,2) or (3,3) if you are strapped on time.
 
 This value determines length of all sequences of characters that are seen, as to which, a huge huge huge vocabulary builds upon.
 
-### Note
-
-When you first run Real Time Scans (DNSRealTimeScans.py), it will take some time to build the Random Forest Classifier. After building, it should save the classifier as RandomForestDomainNameClassifier.joblib in the root.
+After building, it should save the classifier as RandomForestDomainNameClassifier.joblib in the root.
 
 I have the file locally. It was too large to be uploaded on GitHub, hence is omitted im this remote repository.
 

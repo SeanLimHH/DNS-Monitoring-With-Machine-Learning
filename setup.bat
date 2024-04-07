@@ -43,14 +43,13 @@ if "%VIRUS_TOTAL_API_KEY%"=="" (
 )
 echo:
 
-@echo off (
 echo VIRUS_TOTAL_API_KEY=%VIRUS_TOTAL_API_KEY% > .env
 echo URL_SCAN_API_KEY=%URL_SCAN_API_KEY% >> .env
 
 echo URL_SCAN_API_URL=https://urlscan.io/api/v1/scan/ >> .env
 echo VIRUS_TOTAL_API_DOMAIN_URL=https://www.virustotal.com/api/v3/domains/ >> .env
 echo VIRUS_TOTAL_API_IP_ADDRESS_URL=https://www.virustotal.com/api/v3/ip_addresses/ >> .env
-)
+
 echo Environment file setup completed. Private environment file is saved as .env in this directory.
 echo:
 

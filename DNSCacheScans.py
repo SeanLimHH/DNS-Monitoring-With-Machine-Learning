@@ -63,21 +63,21 @@ initialiseAbnormalScanResultsClassifier(scanResultsMatrix)
 for result in scanResultsMatrix:
     IsolationForest.predictVirusTotalResults([result])
 '''
-def prettifyOutput(data):
+def prettifyOutput(domainAnddomainIPAddressResults):
+
     prettifiedOutput = ""
-    for dataset in data:
-        for key, value in dataset.items():
-            prettifiedOutput += f"\n\n\n\nDomain Name: {key}: Results\n"
-            if isinstance(value, set):
-                prettifiedOutput += "    No IP address detected.\n"
-            else:
-                for i, (innerKey, innerValue) in enumerate(value.items(), start=1):
-                    prettifiedOutput += f"    IP address {i} of {key}: {innerKey}: {innerValue}\n"
+    domainResults, domainIPAddressResults = domainAnddomainIPAddressResults
+    for domainName in domainResults:
+        print(f"\n\n\nDomain name: {domainName}")
+        print(f"Domain name scanned results: {domainResults[domainName]}")
+        IPAddresses = domainIPAddressResults[domainName]
+        for index, IPAddress in enumerate(IPAddresses):
+            print(f"{index+1}. {IPAddress}: {IPAddresses[IPAddress]}")
     return prettifiedOutput
 
 
 def run():
     domainIPAddressesToCheck = DNSResolver.getDNSRecordsDomainIPAddress()
-    domainIPAddressResults = signatureBasedScans(domainIPAddressesToCheck)
-    print(prettifyOutput(domainIPAddressResults))
+    domainAnddomainIPAddressResults = signatureBasedScans(domainIPAddressesToCheck)
+    print(prettifyOutput(domainAnddomainIPAddressResults))
 run()
