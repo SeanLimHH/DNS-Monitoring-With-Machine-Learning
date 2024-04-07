@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QPushButton, QWidget, QVBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QApplication, QPushButton, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QTextEdit
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QTextCursor
 import subprocess
@@ -54,13 +54,35 @@ class DNSMonitoringWidget(QWidget):
         self.realTimeToggleButton.clicked.connect(self.toggleRealTimeMonitoring)
         self.realTimeToggleButton.setFixedSize(250, 50)
 
+        self.indicatorLabel = QLabel(self)
+        self.indicatorLabel.setFixedSize(20, 20)
+        self.updateIndicator()
+
+        self.saveOutputButton = QPushButton('Save Output', self)
+        self.saveOutputButton.clicked.connect(self.saveOutputToFile)
+        self.saveOutputButton.setFixedSize(250, 50)
+
         self.outputText = QTextEdit(self)
         self.outputText.setReadOnly(True)
 
+        indicatorLayout = QHBoxLayout() # Put the indicator beside
+
+        buttonsLayout = QVBoxLayout() # Because we stack the two buttons
+        buttonsLayout.addWidget(self.DNSScanButton)
+        buttonsLayout.addWidget(self.realTimeToggleButton)
+        buttonsLayout.addWidget(self.saveOutputButton)
+        buttonsLayout.setAlignment(Qt.AlignCenter)
+        
+
+        indicatorLayout.addLayout(buttonsLayout)
+        indicatorLayout.addWidget(QLabel("Program Running Status:"), alignment=Qt.AlignRight)
+        indicatorLayout.addWidget(self.indicatorLabel, alignment=Qt.AlignLeft)
+
+
+        
         layout = QVBoxLayout() 
         layout.addSpacing(20)
-        layout.addWidget(self.DNSScanButton)
-        layout.addWidget(self.realTimeToggleButton)
+        layout.addLayout(indicatorLayout)
         layout.addWidget(self.outputText)
 
         self.activateEnvironment()
@@ -90,12 +112,15 @@ class DNSMonitoringWidget(QWidget):
         else:
             self.stopScanCache()
         self.updateScanCacheToggleButton()
+        self.updateIndicator()
 
     def startScanCache(self):
         self.outputText.clear()
         self.updateLog("DNS Cache Scan starting...\n")
         self.thread = BackgroundProcess(["python", "DNSCacheScans.py"])
         self.thread.updateSignal.connect(self.updateLog)
+        self.thread.started.connect(self.updateIndicator)
+        self.thread.finished.connect(self.updateIndicator)
         self.thread.start()
         self.scanCacheRunning = True
 
@@ -116,6 +141,7 @@ class DNSMonitoringWidget(QWidget):
         else:
             self.stopRealTimeMonitoring()
         self.updateRealTimeToggleButton()
+        self.updateIndicator()
 
     def startRealTimeMonitoring(self):
         self.outputText.clear()
@@ -134,6 +160,15 @@ class DNSMonitoringWidget(QWidget):
             self.updateLog("\nReal-Time Monitoring stopped.\n")
         self.realTimeMonitoringRunning = False
 
+    def updateIndicator(self):
+        # We need the hasattr simply to do a check if the properties have been initialised first
+        if hasattr(self, 'realTimeMonitoringRunning') and hasattr(self, 'scanCacheRunning'):
+            if self.realTimeMonitoringRunning or self.scanCacheRunning:
+                self.indicatorLabel.setStyleSheet("background-color: green; border-radius: 10px;")
+            else:
+                self.indicatorLabel.setStyleSheet("background-color: red; border-radius: 10px;")
+        else:
+            self.indicatorLabel.setStyleSheet("background-color: red; border-radius: 10px;")
 
     def updateRealTimeToggleButton(self):
         # boolean single button logic - if on then make it off next.
@@ -150,6 +185,14 @@ class DNSMonitoringWidget(QWidget):
 
     def updateLog(self, text):
         self.outputText.append(text)
+
+    def saveOutputToFile(self):
+        if currentDirectory:
+            print(currentDirectory)
+            filePath = os.path.join(currentDirectory, 'output.txt')
+            with open(filePath, 'w') as file:
+                file.write(self.outputText.toPlainText())
+            self.updateLog("\nOutput saved to output.txt.\n")
 
 
 def run():

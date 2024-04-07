@@ -72,7 +72,7 @@ def prettifyOutput(domainAnddomainIPAddressResults):
         print(f"Domain name scanned results: {domainResults[domainName]}")
         IPAddresses = domainIPAddressResults[domainName]
         for index, IPAddress in enumerate(IPAddresses):
-            print(f"{index+1}. {IPAddress}: {IPAddresses[IPAddress]}")
+            print(f"IP Address {index+1}: {IPAddress}: {IPAddresses[IPAddress]}")
     return prettifiedOutput
 
 
