@@ -40,13 +40,14 @@ class DNSMonitoringWidget(QWidget):
         self.initUI()
         self.thread = None
         self.realTimeMonitoringRunning = False
+        self.scanCacheRunning = False
 
     def initUI(self):
         self.setWindowTitle('DNS Monitoring')
         self.setFixedSize(1000, 800)
 
         self.DNSScanButton = QPushButton('Scan DNS Cache', self)
-        self.DNSScanButton.clicked.connect(self.scanDNSCache)
+        self.DNSScanButton.clicked.connect(self.toggleScanCache)
         self.DNSScanButton.setFixedSize(250, 50)
 
         self.realTimeToggleButton = QPushButton('Start Real-Time Monitoring', self)
@@ -83,12 +84,30 @@ class DNSMonitoringWidget(QWidget):
             return False
         return True
 
-    def scanDNSCache(self):
+    def toggleScanCache(self):
+        if not self.scanCacheRunning:
+            self.startScanCache()
+        else:
+            self.stopScanCache()
+        self.updateScanCacheToggleButton()
+
+    def startScanCache(self):
         self.outputText.clear()
         self.updateLog("DNS Cache Scan starting...\n")
         self.thread = BackgroundProcess(["python", "DNSCacheScans.py"])
         self.thread.updateSignal.connect(self.updateLog)
         self.thread.start()
+        self.scanCacheRunning = True
+
+    def stopScanCache(self):
+
+        if self.thread and self.thread.isRunning():
+
+            self.thread.terminate()
+            self.thread.wait()
+
+            self.updateLog("\nDNS Cache Scan stopped.\n")
+        self.scanCacheRunning = False
 
     def toggleRealTimeMonitoring(self):
         
@@ -122,6 +141,12 @@ class DNSMonitoringWidget(QWidget):
             self.realTimeToggleButton.setText('Stop Real-Time Monitoring')
         else:
             self.realTimeToggleButton.setText('Start Real-Time Monitoring')
+
+    def updateScanCacheToggleButton(self):
+        if self.scanCacheRunning:
+            self.DNSScanButton.setText('Stop DNS Cache Scan')
+        else:
+            self.DNSScanButton.setText('Start DNS Cache Scan')
 
     def updateLog(self, text):
         self.outputText.append(text)
