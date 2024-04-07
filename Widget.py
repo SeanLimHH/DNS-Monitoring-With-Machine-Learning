@@ -9,9 +9,6 @@ import os
 currentDirectory = os.path.dirname(os.path.realpath(__file__))
 activateVirtualEnvironment = os.path.join(currentDirectory, "Scripts", "activate")
 
-#print("currentDirectory", currentDirectory)
-#print("activateVirtualEnvironment", activateVirtualEnvironment)
-
 
 class BackgroundProcess(QThread):
 
@@ -42,45 +39,33 @@ class DNSMonitoringWidget(QWidget):
         super().__init__()
         self.initUI()
         self.thread = None
+        self.realTimeMonitoringRunning = False
 
     def initUI(self):
         self.setWindowTitle('DNS Monitoring')
         self.setFixedSize(1000, 800)
 
+        self.DNSScanButton = QPushButton('Scan DNS Cache', self)
+        self.DNSScanButton.clicked.connect(self.scanDNSCache)
+        self.DNSScanButton.setFixedSize(250, 50)
 
-        DNSScanButton = QPushButton('Scan DNS Cache', self)
-        DNSScanButton.clicked.connect(self.scanDNSCache)
-        DNSScanButton.setFixedSize(250, 50)
-
-        realTimeScanButton = QPushButton('Begin Real-Time Monitoring', self)
-        realTimeScanButton.clicked.connect(self.beginRealTimeScan)
-        realTimeScanButton.setFixedSize(250, 50)
-
-        stopButton = QPushButton('Stop', self)
-        stopButton.clicked.connect(self.stopScan)
-        stopButton.setFixedSize(250, 50)
-
-
+        self.realTimeToggleButton = QPushButton('Start Real-Time Monitoring', self)
+        self.realTimeToggleButton.clicked.connect(self.toggleRealTimeMonitoring)
+        self.realTimeToggleButton.setFixedSize(250, 50)
 
         self.outputText = QTextEdit(self)
         self.outputText.setReadOnly(True)
 
-
-    
-        layout = QVBoxLayout() # We stack the buttons vertically.
+        layout = QVBoxLayout() 
         layout.addSpacing(20)
-        layout.addWidget(DNSScanButton)
-        layout.addWidget(realTimeScanButton)
-        layout.addWidget(stopButton)
+        layout.addWidget(self.DNSScanButton)
+        layout.addWidget(self.realTimeToggleButton)
         layout.addWidget(self.outputText)
 
-        
         self.activateEnvironment()
 
-
-        layout.setAlignment(DNSScanButton, Qt.AlignCenter)
-        layout.setAlignment(realTimeScanButton, Qt.AlignCenter)
-        layout.setAlignment(stopButton, Qt.AlignCenter)
+        layout.setAlignment(self.DNSScanButton, Qt.AlignCenter)
+        layout.setAlignment(self.realTimeToggleButton, Qt.AlignCenter)
         self.setLayout(layout)
         self.center()
         self.show()
@@ -105,26 +90,46 @@ class DNSMonitoringWidget(QWidget):
         self.thread.updateSignal.connect(self.updateLog)
         self.thread.start()
 
+    def toggleRealTimeMonitoring(self):
+        
+        if not self.realTimeMonitoringRunning:
+            self.startRealTimeMonitoring()
+        else:
+            self.stopRealTimeMonitoring()
+        self.updateRealTimeToggleButton()
 
-    def beginRealTimeScan(self):
-
+    def startRealTimeMonitoring(self):
         self.outputText.clear()
         self.updateLog("Real-Time Monitoring starting...\n")
         self.thread = BackgroundProcess(["python", "DNSRealTimeScans.py"])
         self.thread.updateSignal.connect(self.updateLog)
+        self.thread.started.connect(self.updateRealTimeToggleButton) 
+        self.thread.finished.connect(self.updateRealTimeToggleButton)
         self.thread.start()
+        self.realTimeMonitoringRunning = True
 
+    def stopRealTimeMonitoring(self):
+        if self.thread and self.thread.isRunning():
+            self.thread.terminate()  # Terminate the background process
+            self.thread.wait()  # Wait for the thread to finish gracefully
+            self.updateLog("\nReal-Time Monitoring stopped.\n")
+        self.realTimeMonitoringRunning = False
+
+
+    def updateRealTimeToggleButton(self):
+        # boolean single button logic - if on then make it off next.
+        if self.realTimeMonitoringRunning:
+            self.realTimeToggleButton.setText('Stop Real-Time Monitoring')
+        else:
+            self.realTimeToggleButton.setText('Start Real-Time Monitoring')
 
     def updateLog(self, text):
         self.outputText.append(text)
 
-    def stopScan(self):
-        if self.thread and self.thread.isRunning():
-            self.thread.terminate()
-            self.updateLog("\nScan stopped.\n")
-        else:
-            self.updateLog("\nNo scan is currently running.\n")
+
 def run():
     app = QApplication(sys.argv)
     window = DNSMonitoringWidget()
     sys.exit(app.exec_())
+
+run()

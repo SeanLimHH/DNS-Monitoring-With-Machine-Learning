@@ -52,7 +52,7 @@ The larger the range between the minimum and maximum length sequence, the longer
 
 The larger the values for either minimum length sequence or maximum length sequence, the longer it takes.
 
-A fast model would be (2,2) or (3,3) if you are strapped on time.
+A fast ngram model would use (2,2) or (3,3); if you are strapped on time.
 
 This value determines length of all sequences of characters that are seen, as to which, a huge huge huge vocabulary builds upon.
 
