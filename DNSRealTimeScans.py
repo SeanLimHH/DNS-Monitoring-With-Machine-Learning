@@ -29,6 +29,11 @@ We want to mitigate Domain Generation Attacks here. Possibly using machine learn
 def checkPackets(packetsList):
     for packet in packetsList:
         print()
+        verdicts = dict()
+        verdicts['RFDomainName'] = {'Name': 'Random Forest Domain Name Analysis', 'Verdict': 'N/A'}
+        verdicts['RFQuery'] = {'Name': 'Random Forest Query Analysis', 'Verdict': 'N/A'}
+        verdicts['RFResponse'] = {'Name': 'Random Forest Response Analysis', 'Verdict': 'N/A'}
+        verdicts['IFQueryResponse'] = {'Name': 'Isolation Forest Query | Reponse Analysis', 'Verdict': 'N/A'}
         RFDomainName = None
         RFQuery = None
         RFResponse = None
@@ -43,32 +48,49 @@ def checkPackets(packetsList):
 
         if packetDomainName:
             print("Packet's domain name:", packetDomainName)
-            RFDomainName = RandomForest.predictDomainName([packetDomainName])
+            if RandomForest.predictDomainName([packetDomainName]):
+                verdicts['RFDomainName']['Verdict'] = 'SAFE'
+            else:
+                verdicts['RFDomainName']['Verdict'] = 'UNSAFE'
         else:
             print("This packet has no domain name!")
 
         encodedPacketQuery = encodePacketQuery(packet)
         if encodedPacketQuery: # Not none implies that this packet is a query.
-            RFQuery = RandomForest.predictQueryLength(encodedPacketQuery)
+            if RandomForest.predictQueryLength(encodedPacketQuery):
+                verdicts['RFQuery']['Verdict'] = 'SAFE'
+            else:
+                verdicts['RFQuery']['Verdict'] = 'UNSAFE'
         else:
             encodedPacketResponse = encodePacketResponse(packet)
             for responsePacket in encodedPacketResponse:
-                RFResponse = RandomForest.predictResponseLength(responsePacket)
+                if RandomForest.predictResponseLength(responsePacket):
+                    verdicts['RFResponse']['Verdict'] = 'SAFE'
+                else:
+                    verdicts['RFResponse']['Verdict'] = 'UNSAFE'
 
 
         # The following is another set of checks using another algorithm - Isolation forest
         # Same checks, for query length and responses
-        IFQueryResponse = checkQueryResponseLengths(packet) 
+        if checkQueryResponseLengths(packet):
+            verdicts['IFQueryResponse']['Verdict'] = 'SAFE'
+        else:
+            verdicts['IFQueryResponse']['Verdict'] = 'UNSAFE'
 
-        verdicts = [RFDomainName, RFQuery, RFResponse, IFQueryResponse]
 
         suspiciousCount = 0
-
+    
+        print("Results of Analyses on DNS Packet:")
         for verdict in verdicts:
-            if verdict is False:
+            print(f"{verdicts[verdict]['Name']}: {verdicts[verdict]['Verdict']}")
+            if verdicts[verdict]['Verdict'] == 'UNSAFE':
                 suspiciousCount += 1
-            
-        if (suspiciousCount/len(verdicts) > 0.5):
+
+
+        verdictsPercentage = round(suspiciousCount/(len(verdicts.keys())-1),1) #-1 because DNS packet is either a query or response
+        print(f"Suspicious / Total Verdicts: {verdictsPercentage}")
+        print("Final evaluation:")
+        if (verdictsPercentage > 0.5):
             print("This packet is suspicious!")
         else:
             print("This packet is not suspicious.")

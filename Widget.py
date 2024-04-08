@@ -139,8 +139,8 @@ class DNSMonitoringWidget(QWidget):
         if self.thread and self.thread.isRunning():
             self.thread.terminate()  # Terminate the background process
             self.thread.wait()  # Wait for the thread to finish gracefully
-            self.updateLog("\nReal-Time Monitoring stopped.\n")
         self.realTimeMonitoringRunning = False
+        self.updateLog("\nReal-Time Monitoring stopped.\n")
 
     def updateIndicator(self):
         # We need the hasattr simply to do a check if the properties have been initialised first
