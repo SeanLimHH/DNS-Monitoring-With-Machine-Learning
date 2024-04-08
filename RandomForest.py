@@ -117,7 +117,7 @@ def trainRandomForestClassifierQueryResponse(labels, encodedData, testSize = 0.2
 
     # encodedData has two flavours: 
     # 1. Query: df[['qd_qtype', 'qd_qname_len']] or
-    # 2. Response: df[['ar_type', 'ar_rdata_len']]
+    # 2. Response: df[['an_type','an_rdata_len','ar_type', 'ar_rdata_len']]
     # Since their training methods are more or less the same, i can re-use this function.
 
     # Labels: 0 means non-malicious, 1 means malicious

@@ -73,5 +73,5 @@ def getResponseAndLengthDataset():
     df = getTunnelingData()
     df['label'] = df['label'].apply(lambda x: 1 if x != 0 else x) # Convert all non-zero to 1. 1 means malicious.
     labels = df['label'].tolist()
-    features = df[['ar_type', 'ar_rdata_len']].values.tolist()
+    features = df[['an_type','an_rdata_len','ar_type', 'ar_rdata_len']].values.tolist()
     return labels, features

@@ -52,8 +52,8 @@ def checkPackets(packetsList):
             RFQuery = RandomForest.predictQueryLength(encodedPacketQuery)
         else:
             encodedPacketResponse = encodePacketResponse(packet)
-            print("Response packetsss", encodedPacketResponse)
-            RFResponse = RandomForest.predictResponseLength(encodedPacketResponse)
+            for responsePacket in encodedPacketResponse:
+                RFResponse = RandomForest.predictResponseLength(responsePacket)
 
 
         # The following is another set of checks using another algorithm - Isolation forest
@@ -109,18 +109,30 @@ def encodePacketResponse(packet):
         DNSPacket = packet[DNS]
 
         if packet.haslayer(DNSRR):
-            for rr in packet[DNSRR]:
-                
-                if rr.type:
-                    DNSPacketEncodedForRandomForest.append(rr.type)
+            for an in DNSPacket:
+                responseEncoding = []
+                if DNSPacket.an.type:
+                    responseEncoding.append(DNSPacket.an.type)
                 else:
-                    DNSPacketEncodedForRandomForest.append(0)
+                    responseEncoding.append(0)
+                if DNSPacket.an.rdata:
+                    responseEncoding.append(DNSPacket.an.rdata)
+                else:
+                    responseEncoding.append(0)
 
-                if rr.rdata:
-                    DNSPacketEncodedForRandomForest.append(len(rr.rdata))
-                else:
-                    DNSPacketEncodedForRandomForest.append(0)
-            return [DNSPacketEncodedForRandomForest]
+                for rr in packet[DNSRR]:
+                    
+                    if rr.type:
+                        responseEncoding.append(rr.type)
+                    else:
+                        responseEncoding.append(0)
+
+                    if rr.rdata:
+                        responseEncoding.append(len(rr.rdata))
+                    else:
+                        responseEncoding.append(0)
+                    DNSPacketEncodedForRandomForest.append(responseEncoding)
+            return DNSPacketEncodedForRandomForest
 
 
 def checkQueryResponseLengths(packet): # DNS exfiltration or DNS tunnelling

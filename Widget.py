@@ -20,7 +20,7 @@ class BackgroundProcess(QThread):
 
     def run(self):
         try:
-            process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+            process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
             while True:
                 output = process.stdout.readline()
                 if output == '' and process.poll() is not None:
@@ -47,7 +47,7 @@ class DNSMonitoringWidget(QWidget):
         self.setFixedSize(1000, 800)
 
         self.DNSScanButton = QPushButton('Scan DNS Cache', self)
-        self.DNSScanButton.clicked.connect(self.toggleScanCache)
+        self.DNSScanButton.clicked.connect(self.startScanCache)
         self.DNSScanButton.setFixedSize(250, 50)
 
         self.realTimeToggleButton = QPushButton('Start Real-Time Monitoring', self)
@@ -75,7 +75,7 @@ class DNSMonitoringWidget(QWidget):
         
 
         indicatorLayout.addLayout(buttonsLayout)
-        indicatorLayout.addWidget(QLabel("Program Running Status:"), alignment=Qt.AlignRight)
+        indicatorLayout.addWidget(QLabel("Monitoring Status:"), alignment=Qt.AlignRight)
         indicatorLayout.addWidget(self.indicatorLabel, alignment=Qt.AlignLeft)
 
 
@@ -106,33 +106,13 @@ class DNSMonitoringWidget(QWidget):
             return False
         return True
 
-    def toggleScanCache(self):
-        if not self.scanCacheRunning:
-            self.startScanCache()
-        else:
-            self.stopScanCache()
-        self.updateScanCacheToggleButton()
-        self.updateIndicator()
-
     def startScanCache(self):
         self.outputText.clear()
         self.updateLog("DNS Cache Scan starting...\n")
         self.thread = BackgroundProcess(["python", "DNSCacheScans.py"])
         self.thread.updateSignal.connect(self.updateLog)
-        self.thread.started.connect(self.updateIndicator)
-        self.thread.finished.connect(self.updateIndicator)
         self.thread.start()
-        self.scanCacheRunning = True
 
-    def stopScanCache(self):
-
-        if self.thread and self.thread.isRunning():
-
-            self.thread.terminate()
-            self.thread.wait()
-
-            self.updateLog("\nDNS Cache Scan stopped.\n")
-        self.scanCacheRunning = False
 
     def toggleRealTimeMonitoring(self):
         
@@ -148,6 +128,8 @@ class DNSMonitoringWidget(QWidget):
         self.updateLog("Real-Time Monitoring starting...\n")
         self.thread = BackgroundProcess(["python", "DNSRealTimeScans.py"])
         self.thread.updateSignal.connect(self.updateLog)
+        self.thread.started.connect(self.updateIndicator)
+        self.thread.finished.connect(self.updateIndicator)
         self.thread.started.connect(self.updateRealTimeToggleButton) 
         self.thread.finished.connect(self.updateRealTimeToggleButton)
         self.thread.start()
@@ -177,11 +159,6 @@ class DNSMonitoringWidget(QWidget):
         else:
             self.realTimeToggleButton.setText('Start Real-Time Monitoring')
 
-    def updateScanCacheToggleButton(self):
-        if self.scanCacheRunning:
-            self.DNSScanButton.setText('Stop DNS Cache Scan')
-        else:
-            self.DNSScanButton.setText('Start DNS Cache Scan')
 
     def updateLog(self, text):
         self.outputText.append(text)
